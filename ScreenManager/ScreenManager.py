@@ -2,7 +2,7 @@ import time
 import gevent
 from gevent import monkey; monkey.patch_all()
 import msvcrt
-
+from ScreenManager import KeyListener
 
 class ScreenManager:
     def __init__(self, refreshRate = 60):
@@ -13,7 +13,6 @@ class ScreenManager:
     def setCurrent(self, screen):
         self.CurrentScreen = screen
 
-
     def drawLoop(self):
         while self.Running:
             if self.CurrentScreen.IsDirty:
@@ -22,11 +21,12 @@ class ScreenManager:
             gevent.sleep(1.0 / self.RefreshRate)
 
     def inputLoop(self):
-        while self.Running:
-            x = msvcrt.kbhit()
-            self.CurrentScreen.handleInput(x)
-            gevent.sleep(1.0 / self.RefreshRate)
-
+        with KeyListener() as listener:
+            while self.Running:
+                x = listener.poll()
+                if x is not None:
+                    self.CurrentScreen.handleInput(x)
+                gevent.sleep(0.01)
 
     def run(self):
         if self.CurrentScreen is None:
