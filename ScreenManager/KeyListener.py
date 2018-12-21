@@ -1,5 +1,16 @@
 from win32api import STD_INPUT_HANDLE
 from win32console import GetStdHandle, KEY_EVENT, ENABLE_ECHO_INPUT, ENABLE_LINE_INPUT, ENABLE_PROCESSED_INPUT
+from enum import Enum
+
+
+class ControlKeys(Enum):
+    Shift = 16
+    Control = 17
+    Alt = 18
+    Left = 37
+    Up = 38
+    Right = 39
+    Down = 40
 
 
 class KeyListener:
@@ -29,9 +40,14 @@ class KeyListener:
         if not len(eventsPeek) == self.curEventLength:
             for curEvent in eventsPeek[self.curEventLength:]:
                 if curEvent.EventType == KEY_EVENT:
-                    if ord(curEvent.Char) == 0 or not curEvent.KeyDown:
+                    if not curEvent.KeyDown:
                         pass
                     else:
+                        if ord(curEvent.Char) == 0:
+                            print(dir(curEvent))
+                            print(curEvent.ControlKeyState)
+                            print(curEvent.CommandId)
+                            print(curEvent.VirtualKeyCode)
                         curChar = str(curEvent.Char)
                         self.capturedChars.append(curChar)
             self.curEventLength = len(eventsPeek)
