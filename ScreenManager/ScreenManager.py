@@ -3,17 +3,16 @@ import gevent
 from gevent import monkey; monkey.patch_all()
 from ScreenManager.KeyListener import KeyListener
 from ctypes import windll, create_string_buffer
+from ScreenManager.Event import Event, KeyDown
 
 class ScreenManager:
     def __init__(self, refreshRate = 60):
         self.Running = False
         self.RootBox = None
         self.RefreshRate = refreshRate
-        self.Focused = None
 
     def setRoot(self, box):
         self.RootBox = box
-        self.Focused = box
 
     def renderText(self, textArray):
         for r in textArray:
@@ -30,23 +29,23 @@ class ScreenManager:
                 self.renderText(self.RootBox.draw())
             gevent.sleep(1.0 / self.RefreshRate)
 
+    def raiseKeyDown(self, character):
+        event = KeyDown(character)
+        self.RootBox.onEvent(event)
+
     def inputLoop(self):
         with KeyListener() as listener:
             while self.Running:
                 x = listener.poll()
                 if x is not None:
-                    if x == '\t':
-                        nextFocus = self.Focused.nextFocus()
-                        if nextFocus is None:
-                            nextFocus = self.RootBox
-                    elif self.Focused is not None:
-                        self.Focused.handleInput(x)
+                    self.raiseKeyDown(x)
                 gevent.sleep(0.01)
 
     def run(self):
         if self.RootBox is None:
             raise RuntimeError('No current screen is set. Cannot run')
         self.Running = True
+        self.RootBox.focus()
         drawlet = gevent.spawn(self.drawLoop)
         inputlet = gevent.spawn(self.inputLoop)
         gevent.joinall([drawlet, inputlet])
