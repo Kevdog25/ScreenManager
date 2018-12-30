@@ -1,4 +1,5 @@
 from ScreenManager.Event import Event, KeyDown
+from copy import deepcopy
 
 class Box:
     def __init__(self, x, y, width, height, parent = None):
@@ -9,41 +10,46 @@ class Box:
         self.Parent = parent
         if self.Parent is not None:
             self.Parent.addChild(self)
-        self.Dirty = True
-        self._dirty = True
-        self.Text = [[None for w in range(self.Width)] for h in range(self.Height)]
+        self.Buffer = [[' ' for w in range(self.Width)] for h in range(self.Height)]
         self.Children = []
         self.Focus = False
         self._focus = False
-
+        self.canFocus = True
+        self._events = {}
+        self.dirty()
+    
+    def removeChild(self, box):
+        i = self.Children.index(box)
+        del self.Children[i]
+        self.dirty()
+    
     def addChild(self, box):
         self.Children.append(box)
         box.Parent = self
+        
+    def getRoot(self):
+        if self.Parent is None:
+            return self
+        return self.Parent.getRoot()
 
-    def update(self):
-        needsUpdate = self._dirty
-        if needsUpdate:
-            self.Text = self.draw()
+    def render(self):
+        # TODO - This is hella slow. Just rerender everything all the time.
+        rendered = deepcopy(self.Buffer)
         for box in self.Children:
-            needsUpdate = needsUpdate or box.IsDirty()
-            if not needsUpdate:
-                continue
-            box.update()
-            boxText = box.draw()
+            boxText = box.render()
+            relY, relX = box.Y - self.Y, box.X - self.X
             for y, row in enumerate(boxText):
-                if y + box.Y >= self.Height or y + box.Y < 0:
+                if y + relY >= self.Height or y + relY < 0:
                     continue
                 for x, cell in enumerate(row):
                     if cell is None:
                         continue
-                    if x + box.X >= self.Width or x + box.X < 0:
+                    if x + relX >= self.Width or x + relX < 0:
                         continue
-                    self.Text[y + box.Y][x + box.X] = cell
+                    rendered[y + relY][x + relX] = cell
         self._dirty = False
         self.Dirty = False
-
-    def draw(self):
-        return self.Text
+        return rendered
 
     def IsDirty(self):
         return self.Dirty
@@ -52,7 +58,7 @@ class Box:
         self.Dirty = True
         self._dirty = True
         parent = self.Parent
-        while parent is not None:
+        while parent is not None and not parent.Dirty:
             parent.Dirty = True
             parent = parent.Parent
         
@@ -86,9 +92,7 @@ class Box:
 
     def onLoseFocus(self):
         pass
-
-    def canFocus(self):
-        return True
+        
         
     # Sketchy Focus stuff down here.
     def focus(self):
@@ -132,29 +136,31 @@ class Box:
         if parent is not None:
             l.append(parent)
         return list(reversed(l))
+        
 
     def cycleFocus(self, child):
         nextIndex = self.Children.index(child) + 1
         for child in self.Children[nextIndex:]:
-            if child.canFocus():
+            if child.canFocus:
                 child.focus()
                 return
 
-        if self.Parent is not None and self.Parent.cycleFocus(self):
+        if self.Parent is not None:
+            self.Parent.cycleFocus(self)
             return
-        
         self.focus()
 
         return
         
     def nextFocus(self):
         for child in self.Children:
-            if child.canFocus():
+            if child.canFocus:
                 child.focus()
                 return
         if self.Parent is not None:
             self.Parent.cycleFocus(self)
         return
 
+    
         
         

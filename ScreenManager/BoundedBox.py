@@ -7,19 +7,23 @@ class BoundaryStyle(Enum):
     Rounded = auto()
 
 class BoundedBox(Box):
-    def __init__(self, x, y, width, height, transparent = False):
-        Box.__init__(self, x, y, width, height)
-        self.Boundary = BoundaryStyle.Single
+    def __init__(self, x, y, width, height, transparent = False, boundary = True, *args, **kwargs):
+        Box.__init__(self, x, y, width, height, *args, **kwargs)
+        self.Boundary = BoundaryStyle.Single if boundary else None
         char = None if transparent else ' '
-        self.Text = [[char for w in range(self.Width)] for h in range(self.Height)]
+        self.Buffer = [[char for w in range(self.Width)] for h in range(self.Height)]
         self.updateBoundary()
 
     def onFocus(self):
+        if self.Boundary is None:
+            return
         self.Boundary = BoundaryStyle.Double
         self.updateBoundary()
         self.dirty()
 
     def onLoseFocus(self):
+        if self.Boundary is None:
+            return
         self.Boundary = BoundaryStyle.Single
         self.updateBoundary()
         self.dirty()
@@ -56,15 +60,15 @@ class BoundedBox(Box):
             horizontal = u'\u2550'
             vertical = u'\u2551'
 
-        self.Text[0][0] = topLeft
+        self.Buffer[0][0] = topLeft
         for i in range(1, self.Width - 1):
-            self.Text[0][i] = horizontal
-        self.Text[0][self.Width - 1] = topRight
+            self.Buffer[0][i] = horizontal
+        self.Buffer[0][self.Width - 1] = topRight
         for i in range(1, self.Height - 1):
-            self.Text[i][self.Width - 1] = vertical
-        self.Text[self.Height - 1][self.Width - 1] = bottomRight
+            self.Buffer[i][self.Width - 1] = vertical
+        self.Buffer[self.Height - 1][self.Width - 1] = bottomRight
         for i in range(1, self.Width - 1):
-            self.Text[self.Height - 1][i] = horizontal
-        self.Text[self.Height - 1][0] = bottomLeft
+            self.Buffer[self.Height - 1][i] = horizontal
+        self.Buffer[self.Height - 1][0] = bottomLeft
         for i in range(1, self.Height - 1):
-            self.Text[i][0] = vertical
+            self.Buffer[i][0] = vertical
